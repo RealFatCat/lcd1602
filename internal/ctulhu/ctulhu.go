@@ -25,7 +25,7 @@ type walkingCthulhu struct {
 	curCol         int
 	curRow         int
 	lcd            *lcd1602.LCD
-	kthulhu        [8]byte
+	cthulhu        [8]byte
 	charLocation   byte
 }
 
@@ -44,7 +44,7 @@ func New(startRow, startCol, turnBackCol, turnForwardCol, direction int, charLoc
 	}
 
 	return &walkingCthulhu{
-		kthulhu:        cthulhu,
+		cthulhu:        cthulhu,
 		lcd:            lcd,
 		curRow:         startRow,
 		curCol:         startCol,

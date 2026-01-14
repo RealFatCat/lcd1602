@@ -220,11 +220,24 @@ func (lcd *LCD) SetCursor(row, col int) error {
 	return lcd.sendCommand(addr)
 }
 
-// Print prints text to the display.
+// Print prints text to the display, starting from specified row and column.
 func (lcd *LCD) Print(text string, row, col int) error {
 	if err := lcd.SetCursor(row, col); err != nil {
 		return err
 	}
+	return lcd.Write(text)
+}
+
+// PrintRAW prints on character by raw address in specified row and column.
+func (lcd *LCD) PrintRAW(raw byte, row, col int) error {
+	if err := lcd.SetCursor(row, col); err != nil {
+		return err
+	}
+	return lcd.WriteRAW(raw)
+}
+
+// WriteRAW prints text to the display, starting from current cursor position.
+func (lcd *LCD) Write(text string) error {
 	for _, char := range text {
 		if err := lcd.sendData(byte(char)); err != nil {
 			return err
@@ -232,10 +245,9 @@ func (lcd *LCD) Print(text string, row, col int) error {
 	}
 	return nil
 }
-func (lcd *LCD) PrintRAW(raw byte, row int, col int) error {
-	if err := lcd.SetCursor(row, col); err != nil {
-		return err
-	}
+
+// WriteRAW prints one character by raw address in current cursor position.
+func (lcd *LCD) WriteRAW(raw byte) error {
 	if err := lcd.sendData(raw); err != nil {
 		return err
 	}
