@@ -72,8 +72,8 @@ const (
 	LCD_DDRAM_ADDR_BASE = 0x80 // 0b10000000
 )
 
-// LCD1602 represents an LCD 1602 display connected via I2C.
-type LCD1602 struct {
+// LCD represents an LCD 1602 display connected via I2C.
+type LCD struct {
 	i2c       *i2c.Device
 	backlight byte
 	cols      int
@@ -81,12 +81,12 @@ type LCD1602 struct {
 }
 
 // New creates a new LCD1602 instance.
-func New(bus string, address int, cols, rows int, isBacklightOn bool) (*LCD1602, error) {
+func New(bus string, address int, cols, rows int, isBacklightOn bool) (*LCD, error) {
 	i2cDevice, err := i2c.Open(&i2c.Devfs{Dev: bus}, address)
 	if err != nil {
 		return nil, err
 	}
-	lcd := &LCD1602{
+	lcd := &LCD{
 		i2c:  i2cDevice,
 		cols: cols,
 		rows: rows,
@@ -102,13 +102,13 @@ func New(bus string, address int, cols, rows int, isBacklightOn bool) (*LCD1602,
 }
 
 // Close device.
-func (lcd *LCD1602) Close() error {
+func (lcd *LCD) Close() error {
 	return lcd.i2c.Close()
 }
 
 // Init initializes the LCD display in 4-bit mode.
 // See Figure24 on 46 page of HD44780 datasheet.
-func (lcd *LCD1602) init() error {
+func (lcd *LCD) init() error {
 	// Initial wait of voltage HIGH on device, probably useless in our case, but respect the docs.
 	time.Sleep(50 * time.Millisecond)
 
@@ -162,7 +162,7 @@ func (lcd *LCD1602) init() error {
 }
 
 // Clear clears the display.
-func (lcd *LCD1602) Clear() error {
+func (lcd *LCD) Clear() error {
 	if err := lcd.sendCommand(LCD_CLEAR); err != nil {
 		return err
 	}
@@ -172,7 +172,7 @@ func (lcd *LCD1602) Clear() error {
 }
 
 // Home moves cursor to home position.
-func (lcd *LCD1602) Home() error {
+func (lcd *LCD) Home() error {
 	if err := lcd.sendCommand(LCD_HOME); err != nil {
 		return err
 	}
@@ -181,7 +181,7 @@ func (lcd *LCD1602) Home() error {
 	return nil
 }
 
-func (lcd *LCD1602) UploadCustomChar(location byte, char [8]byte) error {
+func (lcd *LCD) UploadCustomChar(location byte, char [8]byte) error {
 	location &= 0x7
 	data := (LCD_CGRAM_ADDR_BASE | (location << 3))
 	if err := lcd.sendCommand(data); err != nil {
@@ -197,7 +197,7 @@ func (lcd *LCD1602) UploadCustomChar(location byte, char [8]byte) error {
 }
 
 // SetCursor sets cursor position (row: 0-3, col: 0-lcd.cols).
-func (lcd *LCD1602) SetCursor(row, col int) error {
+func (lcd *LCD) SetCursor(row, col int) error {
 	if col > lcd.cols {
 		return fmt.Errorf("invalid col: %d, valid values 0-15", col)
 	}
@@ -221,7 +221,7 @@ func (lcd *LCD1602) SetCursor(row, col int) error {
 }
 
 // Print prints text to the display.
-func (lcd *LCD1602) Print(text string, row, col int) error {
+func (lcd *LCD) Print(text string, row, col int) error {
 	if err := lcd.SetCursor(row, col); err != nil {
 		return err
 	}
@@ -232,7 +232,7 @@ func (lcd *LCD1602) Print(text string, row, col int) error {
 	}
 	return nil
 }
-func (lcd *LCD1602) PrintRAW(raw byte, row int, col int) error {
+func (lcd *LCD) PrintRAW(raw byte, row int, col int) error {
 	if err := lcd.SetCursor(row, col); err != nil {
 		return err
 	}
@@ -243,19 +243,19 @@ func (lcd *LCD1602) PrintRAW(raw byte, row int, col int) error {
 }
 
 // EnableBacklight enables LED backlighting.
-func (lcd *LCD1602) EnableBacklight() error {
+func (lcd *LCD) EnableBacklight() error {
 	lcd.backlight = backlightOn
 	return lcd.busWrite(lcd.backlight)
 }
 
 // DisableBacklight disables LED backlighting.
-func (lcd *LCD1602) DisableBacklight() error {
+func (lcd *LCD) DisableBacklight() error {
 	lcd.backlight = backlightOff
 	return lcd.busWrite(lcd.backlight)
 }
 
 // ToggleBacklight flips LED backlighting. If it was on: turns off; if it was off: turns on.
-func (lcd *LCD1602) ToggleBacklight() error {
+func (lcd *LCD) ToggleBacklight() error {
 	if lcd.backlight == backlightOff {
 		return lcd.EnableBacklight()
 	}
@@ -263,17 +263,17 @@ func (lcd *LCD1602) ToggleBacklight() error {
 }
 
 // sendCommand sends a command to the LCD.
-func (lcd *LCD1602) sendCommand(command byte) error {
+func (lcd *LCD) sendCommand(command byte) error {
 	return lcd.send(command, registerCommand)
 }
 
 // sendData sends data to the LCD.
-func (lcd *LCD1602) sendData(data byte) error {
+func (lcd *LCD) sendData(data byte) error {
 	return lcd.send(data, registerData)
 }
 
 // send sends a byte to the LCD (4-bit mode).
-func (lcd *LCD1602) send(value byte, rs byte) error {
+func (lcd *LCD) send(value byte, rs byte) error {
 	// Prepare data for I2C communication
 	// High nibble
 	high := value >> 4
@@ -287,7 +287,7 @@ func (lcd *LCD1602) send(value byte, rs byte) error {
 }
 
 // writeByte writes a byte to the I2C device.
-func (lcd *LCD1602) writeByte(value byte, rs byte) error {
+func (lcd *LCD) writeByte(value byte, rs byte) error {
 	// Prepare I2C data.
 	// Start filling data with technical bits (P0-P3).
 	data := rs | writeMode | enableBit | lcd.backlight
@@ -311,7 +311,7 @@ func (lcd *LCD1602) writeByte(value byte, rs byte) error {
 	return nil
 }
 
-func (lcd *LCD1602) busWrite(data byte) error {
+func (lcd *LCD) busWrite(data byte) error {
 	if err := lcd.i2c.Write([]byte{data}); err != nil {
 		return fmt.Errorf("I2C write error: %v", err)
 	}
