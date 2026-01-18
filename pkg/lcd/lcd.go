@@ -1,15 +1,6 @@
 // Yet another lib for LCD1602 I2C in 4-bit mode.
 // It is more descriptive in code, and do not rely on external libs.
-package lcd
 
-import (
-	"fmt"
-	"time"
-
-	"golang.org/x/exp/io/i2c"
-)
-
-// Before we start.
 // Most of I2C modules for LCD uses PCF8574-like circuits.
 // The pins of such PCF8574-like circuits are connected to LCD1602 like so:
 // - P0: RS - Register selection pin, that toggles between instruction and data register (0: instruction (or command) mode, 1: data mode)
@@ -25,12 +16,20 @@ import (
 // and the higher order bits are the real data, that we pass to or get from LCD.
 // That is why, we must run LCD1602 in 4-bit mode.
 
+package lcd
+
+import (
+	"fmt"
+	"time"
+
+	"golang.org/x/exp/io/i2c"
+)
+
 const (
 	DefaultDevice  = "/dev/i2c-1"
 	DefaultAddress = 0x27
 )
 
-// This are for P0-P3 pins.
 const (
 	registerCommand = 0x0
 	registerData    = 0x1
@@ -41,7 +40,6 @@ const (
 	backlightOff = 0x00
 )
 
-// This are for P4-P7 pins.
 const (
 	LCD_CLEAR = 0x01
 	LCD_HOME  = 0x02
@@ -181,6 +179,8 @@ func (lcd *LCD) Home() error {
 	return nil
 }
 
+// UploadCustomChar uploads custom character to location. Possible values for location: 0-7.
+// To print this character on LCD, use PrintRaw() or WriteRaw() methods and use location as raw argument.
 func (lcd *LCD) UploadCustomChar(location byte, char [8]byte) error {
 	location &= 0x7
 	data := (LCD_CGRAM_ADDR_BASE | (location << 3))
