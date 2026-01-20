@@ -12,7 +12,7 @@ func main() {
 	isBacklightOn := true
 	cols := 16
 	rows := 2
-	lcd, err := lcd1602.New(lcd1602.DefaultDevice, lcd1602.DefaultAddress, cols, rows, isBacklightOn)
+	lcd, err := lcd1602.New(lcd1602.DefaultDevice, lcd1602.DefaultAddress, cols, rows, lcd1602.Font5x8, isBacklightOn)
 	if err != nil {
 		log.Fatal(err)
 	}

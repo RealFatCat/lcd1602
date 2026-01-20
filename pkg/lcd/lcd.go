@@ -28,46 +28,47 @@ import (
 const (
 	DefaultDevice  = "/dev/i2c-1"
 	DefaultAddress = 0x27
+
+	Font5x8  = lcdF5x8Dot
+	Font5x10 = lcdF5x10Dot
 )
 
 const (
-	registerCommand = 0x0
-	registerData    = 0x1
-	// readMode        = 0x2 // useless in most cases, due to PCF8574-like circuits
-	writeMode    = 0x0
-	enableBit    = 0x4
-	backlightOn  = 0x08
-	backlightOff = 0x00
-)
+	lcdRegisterCommand = 0x0
+	lcdRegisterData    = 0x1
+	// lcdReadMode        = 0x2 // useless in most cases, due to PCF8574-like circuits
+	lcdWriteMode    = 0x0
+	lcdEnableBit    = 0x4
+	lcdBacklightOn  = 0x08
+	lcdBacklightOff = 0x00
 
-const (
-	LCD_CLEAR = 0x01
-	LCD_HOME  = 0x02
+	lcdClear = 0x01
+	lcdHome  = 0x02
 
-	LCD_ENTRY_MODE_SET           = 0x04 // 0b100
-	LCD_ENTRY_MODE_ID_INCR       = 0x02 // 0b010
-	LCD_ENTRY_MODE_ID_DECR       = 0x00
-	LCD_ENTRY_MODE_SHIFT_ENABLE  = 0x01 // 0b001
-	LCD_ENTRY_MODE_SHIFT_DISABLE = 0x00
+	lcdEntryModeSet          = 0x04 // 0b100
+	lcdEntryModeIDIncr       = 0x02 // 0b010
+	lcdEntryModeIDDecr       = 0x00
+	lcdEntryModeShiftEnable  = 0x01 // 0b001
+	lcdEntryModeShiftDisable = 0x00
 
-	LCD_FUNC_SET  = 0x20 // 0b100000
-	LCD_DL_4BIT   = 0x00
-	LCD_DL_8BIT   = 0x10 // 0b010000
-	LCD_N_ONELINE = 0x00
-	LCD_N_TWOLINE = 0x08 // 0b001000
-	LCD_F_5X8DOT  = 0x00
-	LCD_F_5X10DOT = 0x04 // 0b000100
+	lcdFuncSet = 0x20 // 0b100000
+	lcdDL4Bit  = 0x00
+	// lcdDL8Bit   = 0x10 // 0b010000 // useless in our case
+	lcdNOneLine = 0x00
+	lcdNTwoLine = 0x08 // 0b001000
+	lcdF5x8Dot  = 0x00
+	lcdF5x10Dot = 0x04 // 0b000100
 
-	LCD_DISPLAY_CTRL       = 0x08 // 0b1000
-	LCD_DISPLAY_ON         = 0x04 // 0b0100
-	LCD_DISPLAY_OFF        = 0x00
-	LCD_DISPLAY_CURSOR_ON  = 0x02 // 0b0010
-	LCD_DISPLAY_CURSOR_OFF = 0x00
-	LCD_DISPLAY_BLINK_ON   = 0x01 // 0b0001
-	LCD_DISPLAY_BLINK_OFF  = 0x00
+	lcdDisplayCtrl      = 0x08 // 0b1000
+	lcdDisplayOn        = 0x04 // 0b0100
+	lcdDisplayOff       = 0x00
+	lcdDisplayCursorOn  = 0x02 // 0b0010
+	lcdDisplayCursorOff = 0x00
+	lcdDisplayBlinkOn   = 0x01 // 0b0001
+	lcdDisplayBlinkOff  = 0x00
 
-	LCD_CGRAM_ADDR_BASE = 0x40 // 0b01000000
-	LCD_DDRAM_ADDR_BASE = 0x80 // 0b10000000
+	lcdCGRAMAddrBase = 0x40 // 0b01000000
+	lcdDDRAMAddrBase = 0x80 // 0b10000000
 )
 
 // LCD represents an LCD 1602 display connected via I2C.
@@ -76,10 +77,36 @@ type LCD struct {
 	backlight byte
 	cols      int
 	rows      int
+	font      byte
+
+	displayState byte
 }
 
-// New creates a new LCD1602 instance.
-func New(bus string, address int, cols, rows int, isBacklightOn bool) (*LCD, error) {
+// New creates and initializes a new LCD1602 display instance connected via I2C.
+
+// Parameters:
+//   - bus: The I2C bus device path (e.g., "/dev/i2c-1" or use DefaultDevice constant).
+//   - address: The I2C device address (typically 0x27 for PCF8574-based modules, or use DefaultAddress constant).
+//   - cols: Number of columns (characters per line). Valid values: 16, 20.
+//   - rows: Number of display rows. Valid values: 1, 2, 4.
+//   - font: Font size specification. Must be one of: Font5x8 (standard 5x8 pixel font) or Font5x10 (5x10 pixel font).
+//   - isBacklightOn: Whether to enable the backlight LED immediately upon initialization.
+//
+// Valid combinations:
+//   - 16 columns × 1 row (16x1 display)
+//   - 16 columns × 2 rows (16x2 display, most commonm, this package has been tested on that type of LCD)
+//   - 16 columns × 4 rows (16x4 display)
+//   - 20 columns × 1 row (20x1 display)
+//   - 20 columns × 2 rows (20x2 display)
+//   - 20 columns × 4 rows (20x4 display)
+//
+// Note: The 5x10 font is typically only available for single-line displays (rows=1).
+// For multi-line displays, Font5x8 should be used.
+func New(bus string, address int, cols int, rows int, font byte, isBacklightOn bool) (*LCD, error) {
+	if err := validateInputs(cols, rows, font); err != nil {
+		return nil, fmt.Errorf("invalid inputs: %w", err)
+	}
+
 	i2cDevice, err := i2c.Open(&i2c.Devfs{Dev: bus}, address)
 	if err != nil {
 		return nil, err
@@ -88,15 +115,40 @@ func New(bus string, address int, cols, rows int, isBacklightOn bool) (*LCD, err
 		i2c:  i2cDevice,
 		cols: cols,
 		rows: rows,
+		font: font,
+		// initial display state
+		displayState: lcdDisplayOn | lcdDisplayCursorOff | lcdDisplayBlinkOff,
 	}
 	if err := lcd.init(); err != nil {
 		return nil, err
 	}
 
 	if isBacklightOn {
-		lcd.backlight = backlightOn
+		lcd.backlight = lcdBacklightOn
 	}
 	return lcd, nil
+}
+
+// validateInputs validates the input parameters for New function.
+// It checks that cols is 16 or 20, rows is 1, 2, or 4, font is Font5x8 or Font5x10,
+// and that Font5x10 is only used with single-line displays (rows=1).
+func validateInputs(cols, rows int, font byte) error {
+	if cols != 16 && cols != 20 {
+		return fmt.Errorf("invalid cols value: %d, must be 16 or 20", cols)
+	}
+
+	if rows != 1 && rows != 2 && rows != 4 {
+		return fmt.Errorf("invalid rows value: %d, must be 1, 2, or 4", rows)
+	}
+
+	if font != Font5x8 && font != Font5x10 {
+		return fmt.Errorf("invalid font value: %d, must be Font5x8 (%d) or Font5x10 (%d)", font, Font5x8, Font5x10)
+	}
+
+	if font == Font5x10 && rows != 1 {
+		return fmt.Errorf("Font5x10 is only available for single-line displays (rows=1), got rows=%d", rows)
+	}
+	return nil
 }
 
 // Close device.
@@ -135,19 +187,21 @@ func (lcd *LCD) init() error {
 	}
 
 	// Initial configuration of LCD.
-	// 4-bit mode, 2 rows, 5x8 dots.
-	// TODO: Add customization, as only on LCD_FUNC_SET we can set this initial parameters of display.
-	if err := lcd.sendCommand(LCD_FUNC_SET | LCD_DL_4BIT | LCD_N_TWOLINE | LCD_F_5X8DOT); err != nil {
+	lineMode := byte(lcdNOneLine)
+	if lcd.rows > 1 {
+		lineMode = lcdNTwoLine
+	}
+	if err := lcd.sendCommand(lcdFuncSet | lcdDL4Bit | lineMode | lcd.font); err != nil {
 		return err
 	}
 
 	// Display on, cursor off, blink off.
-	if err := lcd.sendCommand(LCD_DISPLAY_CTRL | LCD_DISPLAY_ON | LCD_DISPLAY_CURSOR_OFF | LCD_DISPLAY_BLINK_OFF); err != nil {
+	if err := lcd.sendCommand(lcdDisplayCtrl | lcd.displayState); err != nil {
 		return err
 	}
 
 	// Entry mode set: cursor moves right, no display shift.
-	if err := lcd.sendCommand(LCD_ENTRY_MODE_SET | LCD_ENTRY_MODE_ID_INCR | LCD_ENTRY_MODE_SHIFT_DISABLE); err != nil {
+	if err := lcd.sendCommand(lcdEntryModeSet | lcdEntryModeIDIncr | lcdEntryModeShiftDisable); err != nil {
 		return err
 	}
 
@@ -161,7 +215,7 @@ func (lcd *LCD) init() error {
 
 // Clear clears the display.
 func (lcd *LCD) Clear() error {
-	if err := lcd.sendCommand(LCD_CLEAR); err != nil {
+	if err := lcd.sendCommand(lcdClear); err != nil {
 		return err
 	}
 	// According to docs, it can take a long time to clear display.
@@ -171,7 +225,7 @@ func (lcd *LCD) Clear() error {
 
 // Home moves cursor to home position.
 func (lcd *LCD) Home() error {
-	if err := lcd.sendCommand(LCD_HOME); err != nil {
+	if err := lcd.sendCommand(lcdHome); err != nil {
 		return err
 	}
 	// According to docs, it can take a long time to return to home.
@@ -183,7 +237,7 @@ func (lcd *LCD) Home() error {
 // To print this character on LCD, use PrintRaw() or WriteRaw() methods and use location as raw argument.
 func (lcd *LCD) UploadCustomChar(location byte, char [8]byte) error {
 	location &= 0x7
-	data := (LCD_CGRAM_ADDR_BASE | (location << 3))
+	data := (lcdCGRAMAddrBase | (location << 3))
 	if err := lcd.sendCommand(data); err != nil {
 		return err
 	}
@@ -196,24 +250,24 @@ func (lcd *LCD) UploadCustomChar(location byte, char [8]byte) error {
 	return nil
 }
 
-// SetCursor sets cursor position (row: 0-3, col: 0-lcd.cols).
+// SetCursor sets cursor position.
 func (lcd *LCD) SetCursor(row, col int) error {
-	if col > lcd.cols {
-		return fmt.Errorf("invalid col: %d, valid values 0-15", col)
+	if (col < 0) || (col > lcd.cols) {
+		return fmt.Errorf("invalid col: %d", col)
 	}
 
 	var addr byte
 	switch row {
 	case 0:
-		addr = LCD_DDRAM_ADDR_BASE
+		addr = lcdDDRAMAddrBase
 	case 1:
-		addr = LCD_DDRAM_ADDR_BASE + 0x40
+		addr = lcdDDRAMAddrBase + 0x40
 	case 2:
-		addr = LCD_DDRAM_ADDR_BASE + 0x14
+		addr = lcdDDRAMAddrBase + 0x14
 	case 3:
-		addr = LCD_DDRAM_ADDR_BASE + 0x54
+		addr = lcdDDRAMAddrBase + 0x54
 	default:
-		return fmt.Errorf("invalid row: %d, valid values 0-3 ", row)
+		return fmt.Errorf("invalid row: %d", row)
 	}
 
 	addr += byte(col)
@@ -236,7 +290,7 @@ func (lcd *LCD) PrintRAW(raw byte, row, col int) error {
 	return lcd.WriteRAW(raw)
 }
 
-// WriteRAW prints text to the display, starting from current cursor position.
+// Write prints text to the display, starting from current cursor position.
 func (lcd *LCD) Write(text string) error {
 	for _, char := range text {
 		if err := lcd.sendData(byte(char)); err != nil {
@@ -256,32 +310,103 @@ func (lcd *LCD) WriteRAW(raw byte) error {
 
 // EnableBacklight enables LED backlighting.
 func (lcd *LCD) EnableBacklight() error {
-	lcd.backlight = backlightOn
+	lcd.backlight = lcdBacklightOn
 	return lcd.busWrite(lcd.backlight)
 }
 
 // DisableBacklight disables LED backlighting.
 func (lcd *LCD) DisableBacklight() error {
-	lcd.backlight = backlightOff
+	lcd.backlight = lcdBacklightOff
 	return lcd.busWrite(lcd.backlight)
 }
 
 // ToggleBacklight flips LED backlighting. If it was on: turns off; if it was off: turns on.
 func (lcd *LCD) ToggleBacklight() error {
-	if lcd.backlight == backlightOff {
+	if lcd.backlight == lcdBacklightOff {
 		return lcd.EnableBacklight()
 	}
 	return lcd.DisableBacklight()
 }
 
+// DisplayOn turns on the LCD display.
+// The display will show characters but the cursor and blink settings remain unchanged.
+func (lcd *LCD) DisplayOn() error {
+	lcd.displayState |= lcdDisplayOn
+	return lcd.sendCommand(lcdDisplayCtrl | lcd.displayState)
+}
+
+// DisplayOff turns off the LCD display.
+// The display will be blank but the cursor position and content are preserved.
+// Use DisplayOn() to turn the display back on.
+// Data on display is not cleared when display is off.
+func (lcd *LCD) DisplayOff() error {
+	lcd.displayState &= ^(byte(lcdDisplayOn))
+	return lcd.sendCommand(lcdDisplayCtrl | lcd.displayState)
+}
+
+// ToggleDisplay toggles the display state.
+// If the display is on, it turns it off; if it's off, it turns it on.
+func (lcd *LCD) ToggleDisplay() error {
+	if (lcd.displayState & lcdDisplayOn) == lcdDisplayOn {
+		return lcd.DisplayOff()
+	}
+	return lcd.DisplayOn()
+}
+
+// CursorOn makes the cursor visible on the display.
+// The cursor appears as an underscore at the current cursor position.
+func (lcd *LCD) CursorOn() error {
+	lcd.displayState |= lcdDisplayCursorOn
+	return lcd.sendCommand(lcdDisplayCtrl | lcd.displayState)
+}
+
+// CursorOff hides the cursor on the display.
+// The cursor position is still tracked, but it won't be visible.
+func (lcd *LCD) CursorOff() error {
+	lcd.displayState &= ^(byte(lcdDisplayCursorOn))
+	return lcd.sendCommand(lcdDisplayCtrl | lcd.displayState)
+}
+
+// ToggleCursor toggles the cursor visibility.
+// If the cursor is visible, it hides it; if it's hidden, it makes it visible.
+func (lcd *LCD) ToggleCursor() error {
+	if (lcd.displayState & lcdDisplayCursorOn) == lcdDisplayCursorOn {
+		return lcd.CursorOff()
+	}
+	return lcd.CursorOn()
+}
+
+// BlinkOn enables blinking of the character at the cursor position.
+// The character at the cursor will blink on and off.
+func (lcd *LCD) BlinkOn() error {
+	lcd.displayState |= lcdDisplayBlinkOn
+	return lcd.sendCommand(lcdDisplayCtrl | lcd.displayState)
+}
+
+// BlinkOff disables blinking of the character at the cursor position.
+// The character will remain static at the cursor position.
+func (lcd *LCD) BlinkOff() error {
+	lcd.displayState &= ^(byte(lcdDisplayBlinkOn))
+	return lcd.sendCommand(lcdDisplayCtrl | lcd.displayState)
+}
+
+// ToggleBlink toggles the blink state of the character at the cursor position.
+// If blinking is enabled, it disables it; if it's disabled, it enables it.
+func (lcd *LCD) ToggleBlink() error {
+	if (lcd.displayState & lcdDisplayBlinkOn) == lcdDisplayBlinkOn {
+		return lcd.BlinkOff()
+	}
+	return lcd.BlinkOn()
+}
+
 // sendCommand sends a command to the LCD.
 func (lcd *LCD) sendCommand(command byte) error {
-	return lcd.send(command, registerCommand)
+	return lcd.send(command, lcdRegisterCommand)
 }
 
 // sendData sends data to the LCD.
 func (lcd *LCD) sendData(data byte) error {
-	return lcd.send(data, registerData)
+	return lcd.send(data, lcdRegisterData)
 }
 
 // send sends a byte to the LCD (4-bit mode).
@@ -302,7 +427,7 @@ func (lcd *LCD) send(value byte, rs byte) error {
 func (lcd *LCD) writeByte(value byte, rs byte) error {
 	// Prepare I2C data.
 	// Start filling data with technical bits (P0-P3).
-	data := rs | writeMode | enableBit | lcd.backlight
+	data := rs | lcdWriteMode | lcdEnableBit | lcd.backlight
 
 	// Set data bits (P4-P7).
 	data |= (value << 4)
@@ -313,7 +438,7 @@ func (lcd *LCD) writeByte(value byte, rs byte) error {
 	}
 
 	// Toggle enable bit to latch data.
-	data &= ^(byte(enableBit))
+	data &= ^(byte(lcdEnableBit))
 	if err := lcd.busWrite(data); err != nil {
 		return err
 	}
@@ -323,6 +448,7 @@ func (lcd *LCD) writeByte(value byte, rs byte) error {
 	return nil
 }
 
+// busWrite writes a single byte to the I2C bus.
 func (lcd *LCD) busWrite(data byte) error {
 	if err := lcd.i2c.Write([]byte{data}); err != nil {
 		return fmt.Errorf("I2C write error: %v", err)
