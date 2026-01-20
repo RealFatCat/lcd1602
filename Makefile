@@ -1,10 +1,24 @@
 BINARY_NAME=lcd-demo
 LDFLAGS=-ldflags="-s -w"
 
-# Default target - build for current architecture
-.DEFAULT_GOAL := build
+# Default target - show help
+.DEFAULT_GOAL := help
 
-.PHONY: build build-all clean arm5 arm6 arm7 arm64
+.PHONY: help build build-all clean arm5 arm6 arm7 arm64
+
+# Show help message
+help:
+	@echo "LCD1602 Demo - Available targets:"
+	@echo ""
+	@echo "  make help      - Show this help message"
+	@echo "  make build     - Build for current architecture"
+	@echo "  make arm5      - Build for ARMv5"
+	@echo "  make arm6      - Build for ARMv6"
+	@echo "  make arm7      - Build for ARMv7"
+	@echo "  make arm64     - Build for ARM64"
+	@echo "  make build-all - Build for all ARM architectures"
+	@echo "  make clean     - Remove all build artifacts"
+	@echo ""
 
 # Build for current architecture
 build:

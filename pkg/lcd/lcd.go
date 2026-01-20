@@ -1,5 +1,4 @@
 // Yet another lib for LCD1602 I2C in 4-bit mode.
-// It is more descriptive in code, and do not rely on external libs.
 
 // Most of I2C modules for LCD uses PCF8574-like circuits.
 // The pins of such PCF8574-like circuits are connected to LCD1602 like so:
@@ -283,6 +282,7 @@ func (lcd *LCD) Print(text string, row, col int) error {
 }
 
 // PrintRAW prints on character by raw address in specified row and column.
+// See table 4 on pages 17-18, depending on your module.
 func (lcd *LCD) PrintRAW(raw byte, row, col int) error {
 	if err := lcd.SetCursor(row, col); err != nil {
 		return err
@@ -301,6 +301,7 @@ func (lcd *LCD) Write(text string) error {
 }
 
 // WriteRAW prints one character by raw address in current cursor position.
+// See table 4 on pages 17-18, depending on your module.
 func (lcd *LCD) WriteRAW(raw byte) error {
 	if err := lcd.sendData(raw); err != nil {
 		return err
