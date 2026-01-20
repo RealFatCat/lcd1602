@@ -251,7 +251,7 @@ func (lcd *LCD) UploadCustomChar(location byte, char [8]byte) error {
 
 // SetCursor sets cursor position.
 func (lcd *LCD) SetCursor(row, col int) error {
-	if (col < 0) || (col > lcd.cols) {
+	if (col < 0) || (col >= lcd.cols) {
 		return fmt.Errorf("invalid col: %d", col)
 	}
 
