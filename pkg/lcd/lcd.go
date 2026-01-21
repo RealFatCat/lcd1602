@@ -249,7 +249,10 @@ func (lcd *LCD) UploadCustomChar(location byte, char [8]byte) error {
 	return nil
 }
 
-// SetCursor sets cursor position.
+// SetCursor sets cursor position. Numeration is from 0 to your module number of rows/columns - 1.
+// For example, for module with 16 columns and 2 rows, valid values are:
+//   - columns: [0-15]
+//   - rows: [0-1]
 func (lcd *LCD) SetCursor(row, col int) error {
 	if (col < 0) || (col >= lcd.cols) {
 		return fmt.Errorf("invalid col: %d", col)
@@ -274,6 +277,7 @@ func (lcd *LCD) SetCursor(row, col int) error {
 }
 
 // Print prints text to the display, starting from specified row and column.
+// Check SetCursor documentation for valid row, column values.
 func (lcd *LCD) Print(text string, row, col int) error {
 	if err := lcd.SetCursor(row, col); err != nil {
 		return err
@@ -283,6 +287,7 @@ func (lcd *LCD) Print(text string, row, col int) error {
 
 // PrintRAW prints on character by raw address in specified row and column.
 // See table 4 on pages 17-18, depending on your module.
+// Check SetCursor documentation for valid row, column values.
 func (lcd *LCD) PrintRAW(raw byte, row, col int) error {
 	if err := lcd.SetCursor(row, col); err != nil {
 		return err
