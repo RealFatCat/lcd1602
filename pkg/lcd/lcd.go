@@ -163,25 +163,23 @@ func (lcd *LCD) init() error {
 
 	// Initialization commmands.
 	// Waiting timings are trying to respect the docs.
-	// Send straight to P4 and P5 data pins, so send 0x30 (0b00110000).
-	if err := lcd.busWrite(0x30); err != nil { // 1st
+	if err := lcd.sendCommand(0x03); err != nil { // 1st
 		return err
 	}
 	time.Sleep(5 * time.Millisecond)
 
-	if err := lcd.busWrite(0x30); err != nil { // 2nd
+	if err := lcd.sendCommand(0x03); err != nil { // 2nd
 		return err
 	}
 	time.Sleep(100 * time.Microsecond)
 
-	if err := lcd.busWrite(0x30); err != nil { // 3rd
+	if err := lcd.sendCommand(0x03); err != nil { // 3rd
 		return err
 	}
 
 	// Switch from 8-bit to 4-bit mode by sending 0x2.
 	// This configures the LCD to operate in 4-bit interface mode, sending high nibble first.
-	// Send data straight to P5 data pin so, 0x20 (0b00100000)
-	if err := lcd.busWrite(0x20); err != nil {
+	if err := lcd.sendCommand(0x02); err != nil {
 		return err
 	}
 
