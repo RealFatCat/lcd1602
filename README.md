@@ -49,7 +49,7 @@ package main
 
 import (
 	"log"
-	lcd1602 "github.com/realfatcat/lcd1602/pkg/lcd"
+	"github.com/realfatcat/lcd1602"
 )
 
 func main() {

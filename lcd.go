@@ -15,7 +15,7 @@
 // and the higher order bits are the real data, that we pass to or get from LCD.
 // That is why, we must run LCD1602 in 4-bit mode.
 
-package lcd
+package lcd1602
 
 import (
 	"fmt"

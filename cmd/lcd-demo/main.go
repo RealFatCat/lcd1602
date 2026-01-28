@@ -4,8 +4,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/realfatcat/lcd1602"
 	"github.com/realfatcat/lcd1602/internal/ctulhu"
-	lcd1602 "github.com/realfatcat/lcd1602/pkg/lcd"
 )
 
 func main() {

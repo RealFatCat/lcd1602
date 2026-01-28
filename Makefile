@@ -23,27 +23,27 @@ help:
 # Build for current architecture
 build:
 	@echo "Building for current architecture..."
-	go build -o $(BINARY_NAME) $(LDFLAGS) ./main.go
+	go build -o $(BINARY_NAME) $(LDFLAGS) ./cmd/lcd-demo/main.go
 
 # Build for ARMv5
 arm5:
 	@echo "Building for ARMv5..."
-	GOOS=linux GOARCH=arm GOARM=5 go build -o $(BINARY_NAME)-armv5 $(LDFLAGS) ./main.go
+	GOOS=linux GOARCH=arm GOARM=5 go build -o $(BINARY_NAME)-armv5 $(LDFLAGS) ./cmd/lcd-demo/main.go
 
 # Build for ARMv6
 arm6:
 	@echo "Building for ARMv6..."
-	GOOS=linux GOARCH=arm GOARM=6 go build -o $(BINARY_NAME)-armv6 $(LDFLAGS) ./main.go
+	GOOS=linux GOARCH=arm GOARM=6 go build -o $(BINARY_NAME)-armv6 $(LDFLAGS) ./cmd/lcd-demo/main.go
 
 # Build for ARMv7
 arm7:
 	@echo "Building for ARMv7..."
-	GOOS=linux GOARCH=arm GOARM=7 go build -o $(BINARY_NAME)-armv7 $(LDFLAGS) ./main.go
+	GOOS=linux GOARCH=arm GOARM=7 go build -o $(BINARY_NAME)-armv7 $(LDFLAGS) ./cmd/lcd-demo/main.go
 
 # Build for ARM64
 arm64:
 	@echo "Building for ARM64..."
-	GOOS=linux GOARCH=arm64 go build -o $(BINARY_NAME)-arm64 $(LDFLAGS) ./main.go
+	GOOS=linux GOARCH=arm64 go build -o $(BINARY_NAME)-arm64 $(LDFLAGS) ./cmd/lcd-demo/main.go
 
 # Build for all architectures
 build-all: arm5 arm6 arm7 arm64

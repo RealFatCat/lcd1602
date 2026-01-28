@@ -1,7 +1,7 @@
 package ctulhu
 
 import (
-	lcd1602 "github.com/realfatcat/lcd1602/pkg/lcd"
+	lcd1602 "github.com/realfatcat/lcd1602"
 )
 
 // custom Cthulhu character
