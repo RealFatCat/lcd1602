@@ -66,6 +66,12 @@ const (
 	lcdDisplayBlinkOn   = 0x01 // 0b0001
 	lcdDisplayBlinkOff  = 0x00
 
+	lcdCursorDisplayCtrl = 0x10 // 0b00010000
+	lcdCursorShiftLeft   = 0x0  // 0b00000000
+	lcdCursorShiftRight  = 0x04 // 0b00000100
+	lcdDisplayShiftLeft  = 0x08 // 0b00001000
+	lcdDisplayShiftRight = 0x0C // 0b00001100
+
 	lcdCGRAMAddrBase = 0x40 // 0b01000000
 	lcdDDRAMAddrBase = 0x80 // 0b10000000
 )
@@ -272,6 +278,26 @@ func (lcd *LCD) SetCursor(row, col int) error {
 
 	addr += byte(col)
 	return lcd.sendCommand(addr)
+}
+
+// CursorShiftLeft shifts the cursor position to the left (AC is decremented by one.)
+func (lcd *LCD) CursorShiftLeft() error {
+	return lcd.sendCommand(lcdCursorDisplayCtrl | lcdCursorShiftLeft)
+}
+
+// CursorShiftRight shifts the cursor position to the right (AC is incremented by one.)
+func (lcd *LCD) CursorShiftRight() error {
+	return lcd.sendCommand(lcdCursorDisplayCtrl | lcdCursorShiftRight)
+}
+
+// DisplayShiftLeft shifts the entire display to the left. The cursor follows the display shift.
+func (lcd *LCD) DisplayShiftLeft() error {
+	return lcd.sendCommand(lcdCursorDisplayCtrl | lcdDisplayShiftLeft)
+}
+
+// DisplayShiftRight shifts the entire display to the right. The cursor follows the display shift.
+func (lcd *LCD) DisplayShiftRight() error {
+	return lcd.sendCommand(lcdCursorDisplayCtrl | lcdDisplayShiftRight)
 }
 
 // Print prints text to the display, starting from specified row and column.

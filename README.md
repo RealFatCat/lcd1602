@@ -14,13 +14,13 @@ Yet another Go library for controlling LCD1602 displays via I2C in 4-bit mode.
 
 ## Demo
 
-Run the included demo to see the library in action:
+Run the included demo (for 1602 version of display) to see the library in action:
 
 ```bash
 go run main.go
 ```
 
-This initializes the LCD, displays some ASCII art, updates the current time every second, and even wakes up Cthulhu!
+This initializes the LCD, says "Hello!", displays some ASCII art, updates the current time every second, and even wakes up Cthulhu!
 
 To build the demo for your architecture use `make` commands.
 
@@ -64,7 +64,7 @@ func main() {
 	}
 	defer lcd.Close()
 
-	// Define a custom heart character (5x8 pixels)
+	// Define a custom cthulhu character (5x8 pixels)
 	// Each byte represents one row, bits 0-4 represent the 5 pixels
     var cthulhu = [8]byte{
         0b01110,

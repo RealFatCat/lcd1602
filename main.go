@@ -16,7 +16,17 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer func() { _ = lcd.Close() }()
+	defer func() { lcd.Clear(); _ = lcd.Close() }()
+
+	lcd.Print("Hello!", 0, 7)
+
+	for range 7 {
+		lcd.DisplayShiftLeft()
+		time.Sleep(300 * time.Millisecond)
+	}
+	time.Sleep(1 * time.Second)
+
+	lcd.Clear()
 
 	if err := lcd.Print("  () ()", 0, 7); err != nil {
 		log.Fatal(err)
