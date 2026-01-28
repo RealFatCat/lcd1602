@@ -1,8 +1,6 @@
 package ctulhu
 
 import (
-	"log"
-
 	lcd1602 "github.com/realfatcat/lcd1602/pkg/lcd"
 )
 
@@ -40,7 +38,7 @@ func New(startRow, startCol, turnBackCol, turnForwardCol, direction int, charLoc
 	}
 
 	if err := lcd.PrintRAW(charLocation, startRow, startCol); err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	return &walkingCthulhu{
