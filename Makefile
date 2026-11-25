@@ -49,6 +49,11 @@ arm64:
 build-all: arm5 arm6 arm7 arm64
 	@echo "Build complete for all architectures!"
 
+# Build demo2004 for ARMv7
+demo2004:
+	@echo "Building demo2004 for ARMv7..."
+	GOOS=linux GOARCH=arm GOARM=7 go build -o demo-2004-armv7 $(LDFLAGS) ./cmd/demo2004/main.go
+
 # Clean build artifacts
 clean:
 	@echo "Cleaning build artifacts..."
