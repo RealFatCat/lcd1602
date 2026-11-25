@@ -124,12 +124,14 @@ func New(bus string, address int, cols int, rows int, font byte, isBacklightOn b
 		// initial display state
 		displayState: lcdDisplayOn | lcdDisplayCursorOff | lcdDisplayBlinkOff,
 	}
-	if err := lcd.init(); err != nil {
-		return nil, err
-	}
 
 	if isBacklightOn {
 		lcd.backlight = lcdBacklightOn
+	}
+
+	if err := lcd.init(); err != nil {
+		_ = lcd.Close()
+		return nil, err
 	}
 	return lcd, nil
 }
@@ -169,25 +171,30 @@ func (lcd *LCD) init() error {
 
 	// Initialization commmands.
 	// Waiting timings are trying to respect the docs.
-	if err := lcd.sendCommand(0x03); err != nil { // 1st
+	// The LCD is still in 8-bit mode at this point and only reacts to a single
+	// nibble per E pulse, so each init command is sent with a single nibble
+	// instead of a full byte (which would latch the byte's two nibbles as two unrelated commands).
+	if err := lcd.writeNibble(0x03, lcdRegisterCommand); err != nil { // 1st
 		return err
 	}
 	time.Sleep(5 * time.Millisecond)
 
-	if err := lcd.sendCommand(0x03); err != nil { // 2nd
+	if err := lcd.writeNibble(0x03, lcdRegisterCommand); err != nil { // 2nd
 		return err
 	}
 	time.Sleep(100 * time.Microsecond)
 
-	if err := lcd.sendCommand(0x03); err != nil { // 3rd
+	if err := lcd.writeNibble(0x03, lcdRegisterCommand); err != nil { // 3rd
 		return err
 	}
+	time.Sleep(100 * time.Microsecond)
 
 	// Switch from 8-bit to 4-bit mode by sending 0x2.
 	// This configures the LCD to operate in 4-bit interface mode, sending high nibble first.
-	if err := lcd.sendCommand(0x02); err != nil {
+	if err := lcd.writeNibble(0x2, lcdRegisterCommand); err != nil {
 		return err
 	}
+	time.Sleep(100 * time.Microsecond)
 
 	// Initial configuration of LCD.
 	lineMode := byte(lcdNOneLine)
@@ -476,6 +483,13 @@ func (lcd *LCD) writeByte(value byte, rs byte) error {
 	// Small delay for timing.
 	time.Sleep(50 * time.Microsecond)
 	return nil
+}
+
+// writeNibble sends a single nibble (0x0-0xF) as one E pulse.
+// Used during initialization, when the LCD is still in 8-bit mode and
+// only reacts to a single nibble per E pulse.
+func (lcd *LCD) writeNibble(value byte, rs byte) error {
+	return lcd.writeByte(value&0x0F, rs)
 }
 
 // busWrite writes a single byte to the I2C bus.
